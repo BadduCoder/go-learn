@@ -12,13 +12,12 @@ import (
 
 func main(){
 	logger := log.New(os.Stdout, "go-learn", log.LstdFlags)
-	helloHandler := handlers.NewHello(logger)
-
+	productHandler := handlers.NewProduct(logger)
 	sm := http.NewServeMux()
-	sm.Handle("/", helloHandler)
+	sm.Handle("/", productHandler)
 
 	server := &http.Server{
-		Addr : ":9090",
+	 	Addr : ":9090",
 		ReadTimeout: 1 * time.Second,
 		WriteTimeout: 1 * time.Second,
 		IdleTimeout: 120 * time.Second,
@@ -28,7 +27,8 @@ func main(){
 	go func() {
 		err := server.ListenAndServe()
 		if err!=nil {
-			log.Fatal(err)
+			logger.Println("Exiting Server ", err)
+			os.Exit(1)
 		}
 	}()
 
