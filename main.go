@@ -1,22 +1,45 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
+	"context"
+	"golearn/handlers"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 )
 
 func main(){
-	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		log.Println("Hello World")
-		data, err := ioutil.ReadAll(request.Body)
+	logger := log.New(os.Stdout, "go-learn", log.LstdFlags)
+	helloHandler := handlers.NewHello(logger)
+
+	sm := http.NewServeMux()
+	sm.Handle("/", helloHandler)
+
+	server := &http.Server{
+		Addr : ":9090",
+		ReadTimeout: 1 * time.Second,
+		WriteTimeout: 1 * time.Second,
+		IdleTimeout: 120 * time.Second,
+		Handler: sm,
+	}
+
+	go func() {
+		err := server.ListenAndServe()
 		if err!=nil {
-			http.Error(writer, "Oops! Error occured", http.StatusBadRequest)
+			log.Fatal(err)
 		}
-		log.Printf("data = %s", data)
-		fmt.Fprintf(writer, "Hey %s", data)
-	})
-	
-	http.ListenAndServe(":9090", nil)
+	}()
+
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, os.Interrupt)
+	signal.Notify(sigChan, os.Kill)
+
+	sig := <- sigChan
+	logger.Println("Received signal, graceful shutdown", sig)
+
+	tc, _ := context.WithTimeout(context.Background(), 10 * time.Second)
+
+	server.Shutdown(tc)
 }
